@@ -18,6 +18,8 @@ from fpdf import FPDF
 TEMP_DIR = "temp_exports"
 if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)
+TEMP_DIR = tempfile.mkdtemp()
+atexit.register(lambda: shutil.rmtree(TEMP_DIR))
 
 # --- Helper Functions ---
 
