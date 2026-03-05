@@ -8,3 +8,5 @@ plotly
 py3dmol
 streamlit-molstar
 kaleido
+kaleido
+fpdf2
