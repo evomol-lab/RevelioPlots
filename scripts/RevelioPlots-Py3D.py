@@ -98,7 +98,7 @@ def generate_ramachandran_plot(df, file_name):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=plot_df['Phi'], y=plot_df['Psi'], mode='markers',
-        marker=dict(color=plot_df['Color'], size=8, showscale=False),
+        marker=dict(color=plot_df['Color'], size=8, line=dict(width=1, color='DarkSlateGrey'), showscale=False),
         text=plot_df.apply(lambda r: f"Residue: {r['AA']}{r['Residue']}<br>pLDDT: {r['pLDDT']:.2f}<br>Phi: {r['Phi']:.2f}<br>Psi: {r['Psi']:.2f}", axis=1),
         hoverinfo='text', name='Residues'
     ))
@@ -110,9 +110,10 @@ def generate_ramachandran_plot(df, file_name):
     fig.update_layout(
         title=f"Ramachandran Plot for {file_name}",
         xaxis_title="Phi (Φ) degrees", yaxis_title="Psi (Ψ) degrees",
-        xaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60))),
-        yaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60))),
-        width=600, height=600, showlegend=False, shapes=shapes
+        xaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60)), zeroline=True, zerolinecolor='black', zerolinewidth=1, showgrid=True, gridcolor='LightGray'),
+        yaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60)), zeroline=True, zerolinecolor='black', zerolinewidth=1, showgrid=True, gridcolor='LightGray'),
+        width=600, height=600, showlegend=False, shapes=shapes,
+        template='plotly_white'
     )
     return fig
 
@@ -208,7 +209,7 @@ def single_structure_tab():
             st.subheader("Confidence-Colored Sequence"); st.markdown(get_legend_html(), unsafe_allow_html=True); st.markdown(generate_sequence_figure_html(protein_df), unsafe_allow_html=True)
             st.subheader("Ramachandran Plot"); st.markdown(get_legend_html(), unsafe_allow_html=True)
             rama_fig = generate_ramachandran_plot(protein_df, file_name)
-            if rama_fig: st.plotly_chart(rama_fig, use_container_width=True)
+            if rama_fig: st.plotly_chart(rama_fig, use_container_width=True, config={'toImageButtonOptions': {'format': 'png', 'filename': f'Ramachandran_{file_name}', 'height': 1080, 'width': 1080, 'scale': 3}})
             else: st.warning("Could not generate Ramachandran plot.")
 
 def multi_structure_tab():
@@ -257,7 +258,7 @@ def multi_structure_tab():
                 st.markdown("---")
                 st.markdown("##### Ramachandran Plot");
                 rama_fig = generate_ramachandran_plot(protein_df, file_name);
-                if rama_fig: st.plotly_chart(rama_fig, use_container_width=True, key=f"rama_plot_{file_name}")
+                if rama_fig: st.plotly_chart(rama_fig, use_container_width=True, key=f"rama_plot_{file_name}", config={'toImageButtonOptions': {'format': 'png', 'filename': f'Ramachandran_{file_name}', 'height': 1080, 'width': 1080, 'scale': 3}})
                 else: st.warning("Could not generate Ramachandran plot for this structure.", key=f"rama_warning_{file_name}")
 
 def documentation_tab():
