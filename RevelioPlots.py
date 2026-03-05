@@ -14,8 +14,9 @@ from streamlit_molstar import st_molstar
 from fpdf import FPDF
 
 # --- Setup a temporary directory for uploaded files ---
-TEMP_DIR = tempfile.mkdtemp()
-atexit.register(lambda: shutil.rmtree(TEMP_DIR))
+TEMP_DIR = "temp_exports"
+if not os.path.exists(TEMP_DIR):
+    os.makedirs(TEMP_DIR)
 
 # --- Helper Functions ---
 
