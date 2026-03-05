@@ -11,10 +11,12 @@ import tempfile
 import shutil
 import atexit
 from streamlit_molstar import st_molstar
+from fpdf import FPDF
 
 # --- Setup a temporary directory for uploaded files ---
-TEMP_DIR = tempfile.mkdtemp()
-atexit.register(lambda: shutil.rmtree(TEMP_DIR))
+TEMP_DIR = "temp_exports"
+if not os.path.exists(TEMP_DIR):
+    os.makedirs(TEMP_DIR)
 
 # --- Helper Functions ---
 
@@ -104,7 +106,7 @@ def generate_ramachandran_plot(df, file_name):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=plot_df['Phi'], y=plot_df['Psi'], mode='markers',
-        marker=dict(color=plot_df['Color'], size=8, showscale=False),
+        marker=dict(color=plot_df['Color'], size=8, line=dict(width=1, color='DarkSlateGrey'), showscale=False),
         text=plot_df.apply(lambda r: f"Residue: {r['AA']}{r['Residue']}<br>pLDDT: {r['pLDDT']:.2f}<br>Phi: {r['Phi']:.2f}<br>Psi: {r['Psi']:.2f}", axis=1),
         hoverinfo='text', name='Residues'
     ))
@@ -116,9 +118,10 @@ def generate_ramachandran_plot(df, file_name):
     fig.update_layout(
         title=f"Ramachandran Plot for {file_name}",
         xaxis_title="Phi (Φ) degrees", yaxis_title="Psi (Ψ) degrees",
-        xaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60))),
-        yaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60))),
-        width=600, height=600, showlegend=False, shapes=shapes
+        xaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60)), zeroline=True, zerolinecolor='black', zerolinewidth=1, showgrid=True, gridcolor='LightGray'),
+        yaxis=dict(range=[-180, 180], tickvals=list(range(-180, 181, 60)), zeroline=True, zerolinecolor='black', zerolinewidth=1, showgrid=True, gridcolor='LightGray'),
+        width=600, height=600, showlegend=False, shapes=shapes,
+        template='plotly_white'
     )
     return fig
 
@@ -159,6 +162,41 @@ def calculate_protein_data(file_or_buffer, file_name_for_error_logging=""):
         st.error(f"An error occurred while parsing **{file_name_for_error_logging}**: {e}")
         return None
 
+@st.cache_data
+def create_pdf_report(file_name, plddt_stats, rama_fig, dist_fig):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, f"Analysis Report: {file_name}", ln=True, align="C")
+
+    pdf.set_font("Helvetica", "", 12)
+    pdf.ln(10)
+    pdf.cell(0, 10, f"Mean pLDDT: {plddt_stats['mean']:.2f}", ln=True)
+    pdf.cell(0, 10, f"Median pLDDT: {plddt_stats['median']:.2f}", ln=True)
+    pdf.cell(0, 10, f"Std. Deviation: {plddt_stats['std']:.2f}", ln=True)
+
+    # Save plots as temp images
+    rama_path = os.path.join(TEMP_DIR, f"rama_{file_name}.png")
+    dist_path = os.path.join(TEMP_DIR, f"dist_{file_name}.png")
+
+    if rama_fig: rama_fig.write_image(rama_path, width=800, height=800, scale=2)
+    if dist_fig: dist_fig.write_image(dist_path, width=800, height=600, scale=2)
+
+    if os.path.exists(dist_path):
+        pdf.ln(10)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 10, "pLDDT Distribution", ln=True)
+        pdf.image(dist_path, x=10, y=pdf.get_y(), w=190)
+        pdf.ln(100)
+
+    if os.path.exists(rama_path):
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 10, "Ramachandran Plot", ln=True)
+        pdf.image(rama_path, x=10, y=pdf.get_y(), w=190)
+
+    return pdf.output()
+
 # --- UI Tabs ---
 
 def single_structure_tab():
@@ -198,13 +236,23 @@ def single_structure_tab():
         if protein_df is not None and not protein_df.empty:
             st.subheader("pLDDT Statistics")
             plddt_values = protein_df['pLDDT']
-            col1, col2, col3 = st.columns(3); col1.metric("Mean pLDDT", f"{plddt_values.mean():.2f}"); col2.metric("Median pLDDT", f"{plddt_values.median():.2f}"); col3.metric("Std. Deviation", f"{plddt_values.std():.2f}")
-            st.subheader("pLDDT Distribution Plot"); st.plotly_chart(px.box(protein_df, y="pLDDT", points="all", title=f"Distribution of pLDDT Values for {file_name}", labels={"pLDDT": "pLDDT Score"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], title_x=0.5), use_container_width=True)
+            stats_dict = {'mean': plddt_values.mean(), 'median': plddt_values.median(), 'std': plddt_values.std()}
+            col1, col2, col3 = st.columns(3); col1.metric("Mean pLDDT", f"{stats_dict['mean']:.2f}"); col2.metric("Median pLDDT", f"{stats_dict['median']:.2f}"); col3.metric("Std. Deviation", f"{stats_dict['std']:.2f}")
+            st.subheader("pLDDT Distribution Plot")
+            dist_fig = px.box(protein_df, y="pLDDT", points="all", title=f"Distribution of pLDDT Values for {file_name}", labels={"pLDDT": "pLDDT Score"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], title_x=0.5)
+            st.plotly_chart(dist_fig, width='stretch')
             st.subheader("Confidence-Colored Sequence"); st.markdown(get_legend_html(), unsafe_allow_html=True); st.markdown(generate_sequence_figure_html(protein_df), unsafe_allow_html=True)
             st.subheader("Ramachandran Plot"); st.markdown(get_legend_html(), unsafe_allow_html=True)
             rama_fig = generate_ramachandran_plot(protein_df, file_name)
-            if rama_fig: st.plotly_chart(rama_fig, use_container_width=True)
+            if rama_fig:
+                st.plotly_chart(rama_fig, width='stretch', config={'toImageButtonOptions': {'format': 'png', 'filename': f'Ramachandran_{file_name}', 'height': 1080, 'width': 1080, 'scale': 3}})
+                png_bytes = rama_fig.to_image(format="png", width=1080, height=1080, scale=3)
+                st.download_button(label="Download Ramachandran Plot (PNG)", data=png_bytes, file_name=f"Ramachandran_{file_name}.png", mime="image/png")
             else: st.warning("Could not generate Ramachandran plot.")
+
+            # PDF Report Download
+            pdf_bytes = create_pdf_report(file_name, stats_dict, rama_fig, dist_fig)
+            st.download_button(label="Download Full PDF Report", data=pdf_bytes, file_name=f"Report_{file_name}.pdf", mime="application/pdf")
 
 def multi_structure_tab():
     """Handles the UI and logic for the 'Multi-Structure' tab."""
@@ -242,9 +290,9 @@ def multi_structure_tab():
 
         all_dfs = [d['df'].assign(File=d['name']) for d in all_data]
         stats_data = {d['name']: {'Mean': d['df']['pLDDT'].mean(),'Median': d['df']['pLDDT'].median(),'Std Dev': d['df']['pLDDT'].std()} for d in all_data}
-        st.subheader("pLDDT Statistics Summary"); st.dataframe(pd.DataFrame.from_dict(stats_data, orient='index').style.format("{:.2f}"), use_container_width=True)
+        st.subheader("pLDDT Statistics Summary"); st.dataframe(pd.DataFrame.from_dict(stats_data, orient='index').style.format("{:.2f}"), width='stretch')
         
-        st.subheader("Comparative pLDDT Distribution Plot"); combined_df = pd.concat(all_dfs, ignore_index=True); st.plotly_chart(px.box(combined_df, x="File", y="pLDDT", color="File", points="all", title="Distribution of pLDDT Values Across Multiple Structures", labels={"pLDDT": "pLDDT Score", "File": "Structure File"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], xaxis_title=None, title_x=0.5, showlegend=False), use_container_width=True)
+        st.subheader("Comparative pLDDT Distribution Plot"); combined_df = pd.concat(all_dfs, ignore_index=True); st.plotly_chart(px.box(combined_df, x="File", y="pLDDT", color="File", points="all", title="Distribution of pLDDT Values Across Multiple Structures", labels={"pLDDT": "pLDDT Score", "File": "Structure File"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], xaxis_title=None, title_x=0.5, showlegend=False), width='stretch')
 
         st.subheader("Per-Structure Analysis")
         st.markdown(get_legend_html(), unsafe_allow_html=True)
@@ -259,8 +307,18 @@ def multi_structure_tab():
                 st.markdown("---")
                 st.markdown("##### Ramachandran Plot")
                 rama_fig = generate_ramachandran_plot(protein_df, file_name)
-                if rama_fig: st.plotly_chart(rama_fig, use_container_width=True, key=f"rama_plot_{file_name}")
+                if rama_fig:
+                    st.plotly_chart(rama_fig, width='stretch', key=f"rama_plot_{file_name}", config={'toImageButtonOptions': {'format': 'png', 'filename': f'Ramachandran_{file_name}', 'height': 1080, 'width': 1080, 'scale': 3}})
+                    png_bytes = rama_fig.to_image(format="png", width=1080, height=1080, scale=3)
+                    st.download_button(label="Download Ramachandran Plot (PNG)", data=png_bytes, file_name=f"Ramachandran_{file_name}.png", mime="image/png", key=f"dl_rama_{file_name}")
                 else: st.warning("Could not generate Ramachandran plot for this structure.", key=f"rama_warning_{file_name}")
+
+                # PDF Report Download
+                plddt_values = protein_df['pLDDT']
+                stats_dict = {'mean': plddt_values.mean(), 'median': plddt_values.median(), 'std': plddt_values.std()}
+                dist_fig = px.box(protein_df, y="pLDDT", points="all", title=f"Distribution of pLDDT Values for {file_name}", labels={"pLDDT": "pLDDT Score"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], title_x=0.5)
+                pdf_bytes = create_pdf_report(file_name, stats_dict, rama_fig, dist_fig)
+                st.download_button(label="Download Full PDF Report", data=pdf_bytes, file_name=f"Report_{file_name}.pdf", mime="application/pdf", key=f"dl_pdf_{file_name}")
 def documentation_tab():
     """Handles the UI for the Documentation tab."""
     st.header("RevelioPlots Documentation")
@@ -276,7 +334,7 @@ def documentation_tab():
 st.set_page_config(page_title="RevelioPlots", page_icon="🪄", layout="wide")
 st.sidebar.title("RevelioPlots")
 if os.path.exists('RevelioPlots-logo.png'):
-    st.sidebar.image('RevelioPlots-logo.png', use_container_width=True)
+    st.sidebar.image('RevelioPlots-logo.png', use_column_width=True)
 else:
     st.sidebar.markdown("### pLDDT Visualization Tool")
 st.sidebar.markdown("---"); st.sidebar.info("This application analyzes pLDDT scores from protein structure files (.cif) to visualize model confidence.")
