@@ -336,7 +336,10 @@ if os.path.exists('RevelioPlots-logo.png'):
     st.sidebar.image('RevelioPlots-logo.png', use_column_width=True)
 else:
     st.sidebar.markdown("### pLDDT Visualization Tool")
-st.sidebar.markdown("---"); st.sidebar.info("This application analyzes pLDDT scores from protein structure files (.cif) to visualize model confidence.")
+st.sidebar.markdown("---")
+st.sidebar.info("This application analyzes pLDDT scores from protein structure files (.cif) to visualize model confidence.")
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Citation:**<br>Fernandes, LLS; Azevedo, AHD; França, JVS and Lima, JPMS (2026). RevelioPlots: An Interactive Web Application for Fast AI-Based Protein Models Quality Assessment. bioRxiv. [https://doi.org/10.64898/2026.02.23.707401](https://doi.org/10.64898/2026.02.23.707401).", unsafe_allow_html=True)
 if not os.path.exists("examples"):
     os.makedirs("examples")
     st.info("An 'examples' folder has been created. Add some .cif files to it to use the example feature.")

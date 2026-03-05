@@ -127,3 +127,24 @@ The developer team used generative AI tools (Gemini&reg; and Claude&reg;) for th
 - Writing code for the Interactive Protein Visualization.
 - Elaborate documentation topic structure.
 - Review english language (Grammarly&reg;).
+
+## 6. Citation
+
+If you use RevelioPlots in your research, please cite the following paper:
+
+Fernandes, LLS; Azevedo, AHD; França, JVS and Lima, JPMS (2026). RevelioPlots: An Interactive Web Application for Fast AI-Based Protein Models Quality Assessment. bioRxiv. [https://doi.org/10.64898/2026.02.23.707401](https://doi.org/10.64898/2026.02.23.707401).
+
+```bibtex
+@article {Fernandes2026.02.23.707401,
+	author = {Fernandes, Leonardo Luiz de Sena and Azevedo, Arthur Henrique Dantas de and Fran{\c c}a, Jo{\~a}o Vitor Santos de and Lima, Jo{\~a}o Paulo Matos Santos},
+	title = {RevelioPlots: An Interactive Web Application for Fast AI-Based Protein Models Quality Assessment},
+	elocation-id = {2026.02.23.707401},
+	year = {2026},
+	doi = {10.64898/2026.02.23.707401},
+	publisher = {Cold Spring Harbor Laboratory},
+	abstract = {High-accuracy protein structure prediction by deep learning requires rigorous model quality assessment, a process currently hampered by fragmented, non-interactive tools designed for older experimental data formats. We present RevelioPlots, an open-source, interactive web application (Python/Streamlit) that simplifies and streamlines the assessment of AI-predicted protein structure quality. Its key feature is the combination of statistical pLDDT score analysis (mean, median, box plots) with an interactive, confidence-colored Ramachandran plot. This integration establishes a direct visual link between a model{\textquoteright}s predicted local reliability (pLDDT) and its stereochemical feasibility (backbone geometry). RevelioPlots handles both individual and batch-uploaded models, intelligently falling back to B-factors as a proxy for pLDDT values. Using example model proteins, we demonstrated the tool{\textquoteright}s effectiveness, revealing differences in reliability and a clear visual correlation between regions of low pLDDT scores and residues in sterically disallowed regions. By unifying these critical metrics, RevelioPlots empowers non-experienced researchers to quickly and intuitively assess, compare, and interpret structural model quality, enabling a more confident and integrated use of predicted data.Availability RevelioPlots is available at revelioplots.streamlit.app, with the source code publicly accessible on GitHub at https://github.com/evomol-lab/RevelioPlots.Competing Interest StatementThe authors have declared no competing interest.Coordena{\c c}{\~a}o de Aperfeicoamento de Pessoal de N{\'\i}vel Superior, https://ror.org/00x0ma614, Finance Code 001},
+	URL = {https://www.biorxiv.org/content/early/2026/02/24/2026.02.23.707401},
+	eprint = {https://www.biorxiv.org/content/early/2026/02/24/2026.02.23.707401.full.pdf},
+	journal = {bioRxiv}
+}
+```
