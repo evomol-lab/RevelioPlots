@@ -194,7 +194,7 @@ def create_pdf_report(file_name, plddt_stats, rama_fig, dist_fig):
         pdf.cell(0, 10, "Ramachandran Plot", ln=True)
         pdf.image(rama_path, x=10, y=pdf.get_y(), w=190)
 
-    return pdf.output()
+    return bytes(pdf.output())
 
 # --- UI Tabs ---
 
@@ -235,11 +235,8 @@ def single_structure_tab():
         if protein_df is not None and not protein_df.empty:
             st.subheader("pLDDT Statistics")
             plddt_values = protein_df['pLDDT']
-            stats_dict = {'mean': plddt_values.mean(), 'median': plddt_values.median(), 'std': plddt_values.std()}
-            col1, col2, col3 = st.columns(3); col1.metric("Mean pLDDT", f"{stats_dict['mean']:.2f}"); col2.metric("Median pLDDT", f"{stats_dict['median']:.2f}"); col3.metric("Std. Deviation", f"{stats_dict['std']:.2f}")
-            st.subheader("pLDDT Distribution Plot")
-            dist_fig = px.box(protein_df, y="pLDDT", points="all", title=f"Distribution of pLDDT Values for {file_name}", labels={"pLDDT": "pLDDT Score"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], title_x=0.5)
-            st.plotly_chart(dist_fig, width='stretch')
+            col1, col2, col3 = st.columns(3); col1.metric("Mean pLDDT", f"{plddt_values.mean():.2f}"); col2.metric("Median pLDDT", f"{plddt_values.median():.2f}"); col3.metric("Std. Deviation", f"{plddt_values.std():.2f}")
+            st.subheader("pLDDT Distribution Plot"); st.plotly_chart(px.box(protein_df, y="pLDDT", points="all", title=f"Distribution of pLDDT Values for {file_name}", labels={"pLDDT": "pLDDT Score"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], title_x=0.5), width='stretch')
             st.subheader("Confidence-Colored Sequence"); st.markdown(get_legend_html(), unsafe_allow_html=True); st.markdown(generate_sequence_figure_html(protein_df), unsafe_allow_html=True)
             st.subheader("Ramachandran Plot"); st.markdown(get_legend_html(), unsafe_allow_html=True)
             rama_fig = generate_ramachandran_plot(protein_df, file_name)
@@ -248,10 +245,6 @@ def single_structure_tab():
                 png_bytes = rama_fig.to_image(format="png", width=1080, height=1080, scale=3)
                 st.download_button(label="Download Ramachandran Plot (PNG)", data=png_bytes, file_name=f"Ramachandran_{file_name}.png", mime="image/png")
             else: st.warning("Could not generate Ramachandran plot.")
-
-            # PDF Report Download
-            pdf_bytes = create_pdf_report(file_name, stats_dict, rama_fig, dist_fig)
-            st.download_button(label="Download Full PDF Report", data=pdf_bytes, file_name=f"Report_{file_name}.pdf", mime="application/pdf")
 
 def multi_structure_tab():
     """Handles the UI and logic for the 'Multi-Structure' tab."""
@@ -312,12 +305,6 @@ def multi_structure_tab():
                     st.download_button(label="Download Ramachandran Plot (PNG)", data=png_bytes, file_name=f"Ramachandran_{file_name}.png", mime="image/png", key=f"dl_rama_{file_name}")
                 else: st.warning("Could not generate Ramachandran plot for this structure.", key=f"rama_warning_{file_name}")
 
-                # PDF Report Download
-                plddt_values = protein_df['pLDDT']
-                stats_dict = {'mean': plddt_values.mean(), 'median': plddt_values.median(), 'std': plddt_values.std()}
-                dist_fig = px.box(protein_df, y="pLDDT", points="all", title=f"Distribution of pLDDT Values for {file_name}", labels={"pLDDT": "pLDDT Score"}, template="plotly_white", hover_data=['Residue', 'pLDDT']).update_layout(yaxis_range=[0,100], title_x=0.5)
-                pdf_bytes = create_pdf_report(file_name, stats_dict, rama_fig, dist_fig)
-                st.download_button(label="Download Full PDF Report", data=pdf_bytes, file_name=f"Report_{file_name}.pdf", mime="application/pdf", key=f"dl_pdf_{file_name}")
 def documentation_tab():
     """Handles the UI for the Documentation tab."""
     st.header("RevelioPlots Documentation")
