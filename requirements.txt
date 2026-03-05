@@ -7,3 +7,5 @@ biopython
 plotly
 py3dmol
 streamlit-molstar
+kaleido
+fpdf2
